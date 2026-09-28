@@ -1,0 +1,15 @@
+export const PALETTE = {
+  red: '#FF1739',
+  redSoft: '#FF3B5C',
+  redDeep: '#B4102A',
+  white: '#FFFFFF',
+  textMuted: '#9A9CA6',
+  textFaint: '#5E6069',
+  error: '#FF5470',
+  success: '#2ED573',
+  background: '#000000',
+  surface: 'rgba(255,255,255,0.035)',
+  surfaceBorder: 'rgba(255,255,255,0.08)',
+  inputBg: 'rgba(255,255,255,0.05)',
+  inputBorder: 'rgba(255,255,255,0.1)',
+};

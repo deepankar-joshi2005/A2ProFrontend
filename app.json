@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "A2Pro Fitnes",
+    "slug": "a2profitnes-frontend",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/A2ProLogo.png",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.a2profitnes.app"
+    },
+    "android": {
+      "package": "com.a2profitnes.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/A2ProLogo.png",
+        "backgroundColor": "#000000"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/A2ProLogo.png"
+    },
+    "plugins": [
+      [
+        "expo-status-bar",
+        {
+          "style": "light",
+          "translucent": true
+        }
+      ],
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow the app to access your photos."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/A2ProLogo.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}

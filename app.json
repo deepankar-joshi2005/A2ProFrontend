@@ -15,7 +15,10 @@
         "foregroundImage": "./assets/A2ProLogo.png",
         "backgroundColor": "#000000"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/A2ProLogo.png"
@@ -45,6 +48,14 @@
         }
       ],
       "@react-native-community/datetimepicker"
-    ]
+    ],
+    "extra": {
+      "expo-status-bar": {
+        "style": "light"
+      },
+      "eas": {
+        "projectId": "1a8a39b4-282f-4dca-aff2-836c8338708d"
+      }
+    }
   }
 }

@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 // Must be your computer's LAN IP (not 'localhost') so a phone on the same
 // network/hotspot can reach the backend. Find it with `ipconfig` (Windows)
 // if it changes.
-const BASE_URL = 'http://192.168.43.204:5001';
+const BASE_URL = 'https://a2probackend.onrender.com';
 
 const api = axios.create({
   baseURL: BASE_URL,

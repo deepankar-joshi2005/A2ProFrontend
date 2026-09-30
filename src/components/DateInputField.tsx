@@ -3,9 +3,7 @@ import { Platform, Pressable, TextInput, View, Text, StyleSheet } from 'react-na
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { formatDDMMYYYY, formatDate, parseDDMMYYYY } from '../utils/date';
-
-const DateTimePicker =
-  Platform.OS !== 'web' ? require('@react-native-community/datetimepicker').default : null;
+import CalendarPickerModal from './CalendarPickerModal';
 
 interface Props {
   icon: keyof typeof Ionicons.glyphMap;
@@ -46,17 +44,15 @@ export default function DateInputField({ icon, placeholder, value, onChange }: P
           {value ? formatDate(value) : placeholder}
         </Text>
       </Pressable>
-      {showPicker && (
-        <DateTimePicker
-          value={value ?? new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(_event: any, selected?: Date) => {
-            setShowPicker(false);
-            if (selected) onChange(selected);
-          }}
-        />
-      )}
+      <CalendarPickerModal
+        visible={showPicker}
+        value={value}
+        onSelect={(selected) => {
+          setShowPicker(false);
+          onChange(selected);
+        }}
+        onClose={() => setShowPicker(false)}
+      />
     </View>
   );
 }

@@ -495,6 +495,7 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
       <WhatsappOnboardingModal
         visible={!!savedMember}
         member={savedMember}
+        password={password.trim().length >= 6 ? password.trim() : '123456'}
         onDone={() => {
           setSavedMember(null);
           onSaved();

@@ -1,40 +1,58 @@
-import { useState } from 'react';
-import { Alert, Linking, Modal, Pressable, Text, TextInput, View, StyleSheet, ActivityIndicator } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Modal, Pressable, Text, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PALETTE } from '../theme/darkPalette';
-import { isValidPassword } from '../utils/validation';
-import { createMemberAccount, Member } from '../services/member.service';
+import { Member } from '../services/member.service';
+import { getBusinessProfile } from '../services/businessProfile.service';
+import { formatDate } from '../utils/date';
 
 interface Props {
   visible: boolean;
   member: Member | null;
+  password: string;
   onDone: () => void;
 }
 
-export default function WhatsappOnboardingModal({ visible, member, onDone }: Props) {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+export default function WhatsappOnboardingModal({ visible, member, password, onDone }: Props) {
   const [sending, setSending] = useState(false);
+  const [businessName, setBusinessName] = useState('A2 Pro Fitness');
+  const [businessPhone, setBusinessPhone] = useState('');
+
+  useEffect(() => {
+    getBusinessProfile()
+      .then((profile) => {
+        if (profile.businessName) setBusinessName(profile.businessName);
+        if (profile.phone) setBusinessPhone(profile.phone);
+      })
+      .catch(() => {});
+  }, []);
 
   if (!member) return null;
 
   const handleSend = async () => {
-    if (!isValidPassword(password)) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
     setSending(true);
     try {
-      await createMemberAccount(member._id, password);
       const message =
-        `Hi ${member.name}, you have been registered in A2 Pro Fitness! ` +
-        `Login to our app with:\nEmail: ${member.email}\nPassword: ${password}`;
+        `Hello ${member.name},\n\n` +
+        `Welcome to the gym! Your membership is now active.\n\n` +
+        `--- Membership Details ---\n` +
+        `Gym: ${businessName}\n` +
+        `Plan: ${member.planId?.name || '-'}\n` +
+        `Start Date: ${formatDate(member.joiningDate)}\n` +
+        `Valid Till: ${member.planExpiryDate ? formatDate(member.planExpiryDate) : '-'}\n` +
+        `Amount Paid: Rs ${member.paidAmount}\n` +
+        (businessPhone ? `\nFor any queries, contact us at ${businessPhone}.\n` : '\n') +
+        `\n--- App Login Details ---\n` +
+        `Login to our app with the credentials below to view your membership, workout & diet plans, and more:\n` +
+        `Email: ${member.email}\n` +
+        `Password: ${password}\n\n` +
+        `Keep this information safe. See you at the gym!`;
       const url = `https://wa.me/91${member.mobile}?text=${encodeURIComponent(message)}`;
       await Linking.openURL(url);
       onDone();
     } catch (err: any) {
-      Alert.alert('Could not create account', err?.response?.data?.message || 'Something went wrong');
+      Alert.alert('Could not open WhatsApp', err?.message || 'Something went wrong');
     } finally {
       setSending(false);
     }
@@ -47,7 +65,7 @@ export default function WhatsappOnboardingModal({ visible, member, onDone }: Pro
           <Ionicons name="logo-whatsapp" size={40} color={PALETTE.success} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>Member Registered</Text>
           <Text style={styles.subtitle}>
-            Set a password to activate {member.name}'s app login and send it to them on WhatsApp.
+            Send {member.name}'s app login details to them on WhatsApp.
           </Text>
 
           <View style={styles.readOnlyRow}>
@@ -58,22 +76,10 @@ export default function WhatsappOnboardingModal({ visible, member, onDone }: Pro
             <Ionicons name="call-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
             <Text style={styles.readOnlyText}>+91 {member.mobile}</Text>
           </View>
-
-          <View style={[styles.inputWrap, !!error && { borderColor: PALETTE.error }]}>
+          <View style={styles.readOnlyRow}>
             <Ionicons name="lock-closed-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
-            <TextInput
-              style={styles.input}
-              placeholder="Set a password"
-              placeholderTextColor={PALETTE.textFaint}
-              value={password}
-              onChangeText={(t) => {
-                setPassword(t);
-                if (error) setError('');
-              }}
-              secureTextEntry
-            />
+            <Text style={styles.readOnlyText}>{password}</Text>
           </View>
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
 
           <Pressable onPress={handleSend} disabled={sending}>
             <LinearGradient
@@ -130,20 +136,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   readOnlyText: { color: PALETTE.textMuted, fontSize: 14 },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    backgroundColor: PALETTE.inputBg,
-    borderWidth: 1,
-    borderColor: PALETTE.inputBorder,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48,
-    marginTop: 6,
-  },
-  input: { flex: 1, color: PALETTE.white, fontSize: 14 },
-  errorText: { color: PALETTE.error, fontSize: 12, alignSelf: 'flex-start', marginTop: 6 },
   cta: {
     alignSelf: 'stretch',
     height: 50,

@@ -8,6 +8,7 @@ import {
   FlatList,
   ScrollView,
   Switch,
+  Modal,
   ActivityIndicator,
   Alert,
   Linking,
@@ -18,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDate } from '../utils/date';
+import { BASE_URL } from '../config/api';
 import {
   listMembers,
   listPlans,
@@ -119,6 +121,9 @@ export default function MembersScreen({
 
   // ID Card Modal State
   const [idCardMember, setIdCardMember] = useState<Member | null>(null);
+
+  // Photo View Modal State
+  const [photoViewMember, setPhotoViewMember] = useState<Member | null>(null);
 
   // Confirm dialogs state
   const [logoutVisible, setLogoutVisible] = useState(false);
@@ -563,6 +568,7 @@ export default function MembersScreen({
               onOpenRenewPlan={() => handleOpenRenew(item)}
               onToggleBlock={() => handleToggleBlock(item)}
               onOpenDetail={() => onOpenMemberDetail?.(item)}
+              onPhotoPress={() => setPhotoViewMember(item)}
               palette={palette}
             />
           )}
@@ -632,6 +638,47 @@ export default function MembersScreen({
       />
 
       <IdCardModal member={idCardMember} visible={!!idCardMember} onClose={() => setIdCardMember(null)} />
+
+      {/* ── Photo View Modal (WhatsApp style) ── */}
+      <Modal
+        visible={!!photoViewMember}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoViewMember(null)}
+        statusBarTranslucent
+      >
+        <Pressable style={photoStyles.overlay} onPress={() => setPhotoViewMember(null)}>
+          {/* Top bar */}
+          <View style={photoStyles.topBar}>
+            <View style={[photoStyles.smallAvatar, { backgroundColor: palette.accent }]}>
+              <Text style={photoStyles.smallAvatarText}>
+                {photoViewMember?.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <Text style={photoStyles.name} numberOfLines={1}>{photoViewMember?.name}</Text>
+            <Pressable onPress={() => setPhotoViewMember(null)} hitSlop={12}>
+              <Ionicons name="close" size={26} color="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          {/* Big round photo */}
+          <View style={photoStyles.center}>
+            {photoViewMember?.photoUrl ? (
+              <Image
+                source={{ uri: `${BASE_URL}${photoViewMember.photoUrl}` }}
+                style={photoStyles.bigImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[photoStyles.bigImage, { backgroundColor: palette.accent, alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={{ color: '#FFF', fontSize: 72, fontWeight: '800' }}>
+                  {photoViewMember?.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
 
       <ConfirmDialog
         visible={logoutVisible}
@@ -710,6 +757,7 @@ function MemberCard({
   onOpenRenewPlan,
   onToggleBlock,
   onOpenDetail,
+  onPhotoPress,
   palette,
 }: {
   member: Member;
@@ -719,6 +767,7 @@ function MemberCard({
   onOpenRenewPlan: () => void;
   onToggleBlock: () => void;
   onOpenDetail: () => void;
+  onPhotoPress: () => void;
   palette: any;
 }) {
   const actions: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }[] = [
@@ -750,9 +799,21 @@ function MemberCard({
       </Pressable>
 
       <View style={styles.cardHeader}>
-        <View style={[styles.avatar, { backgroundColor: palette.accentDeep }]}>
-          <Text style={styles.avatarText}>{getInitials(member.name).toUpperCase()}</Text>
-        </View>
+        <Pressable
+          onPress={onPhotoPress}
+          hitSlop={4}
+          style={[styles.avatar, { backgroundColor: palette.accentDeep }]}
+        >
+          {member.photoUrl ? (
+            <Image
+              source={{ uri: `${BASE_URL}${member.photoUrl}` }}
+              style={{ width: 54, height: 54, borderRadius: 27 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.avatarText}>{getInitials(member.name).toUpperCase()}</Text>
+          )}
+        </Pressable>
         <View style={styles.cardFields}>
           <View style={styles.fieldBlock}>
             <Text style={[styles.fieldLabel, { color: palette.textFaint }]}>Name:</Text>
@@ -1119,5 +1180,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+});
+
+const photoStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 60,
+  },
+  topBar: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 52,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  smallAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallAvatarText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  name: { flex: 1, color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  bigImage: {
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
 });

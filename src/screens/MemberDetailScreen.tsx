@@ -21,12 +21,14 @@ import { useTheme } from '../context/ThemeContext';
 import { usePermissions } from '../context/PermissionsContext';
 import AccessDenied from '../components/AccessDenied';
 import { formatDate } from '../utils/date';
+import { BASE_URL } from '../config/api';
 import {
   getMember,
   clearMemberPlan,
   toggleFreezeMember,
   toggleBlockMember,
   assignMemberBatch,
+  updateMemberPhoto,
   Member,
 } from '../services/member.service';
 import { punchAttendance, getMemberAttendanceHistory, AttendanceRecord } from '../services/attendance.service';
@@ -140,9 +142,32 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
   const [viewWorkoutPlan, setViewWorkoutPlan] = useState<MemberWorkoutPlan | null>(null);
   const [viewDietPlan, setViewDietPlan] = useState<MemberDietPlan | null>(null);
   const [viewService, setViewService] = useState<GymServiceRecord | null>(null);
+  const [photoViewVisible, setPhotoViewVisible] = useState(false);
 
   const refreshMember = () => {
     getMember(member._id).then(setMember).catch(() => {});
+  };
+
+  const handleUpdatePhoto = async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission needed', 'Allow photo library access to update profile photo.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const updated = await updateMemberPhoto(member._id, result.assets[0].uri);
+      setMember(updated);
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.message || 'Could not update photo');
+    }
   };
 
   useEffect(() => {
@@ -510,10 +535,29 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
         {/* Header card */}
         <View style={[styles.card, { backgroundColor: palette.cardBg, borderColor: palette.cardBorder }]}>
           <View style={styles.headerRow}>
-            <View style={[styles.avatar, { backgroundColor: accent }]}>
-              <Text style={styles.avatarText}>{member.name.charAt(0).toUpperCase()}</Text>
-            </View>
-            <View style={{ flex: 1, marginLeft: 14 }}>
+            <Pressable
+              onPress={() => setPhotoViewVisible(true)}
+              style={styles.avatarWrap}
+            >
+              {member.photoUrl ? (
+                <Image
+                  source={{ uri: `${BASE_URL}${member.photoUrl}` }}
+                  style={styles.avatarImg}
+                />
+              ) : (
+                <View style={[styles.avatarImg, { backgroundColor: accent, alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={styles.avatarText}>{member.name.charAt(0).toUpperCase()}</Text>
+                </View>
+              )}
+              <Pressable
+                onPress={() => setPhotoViewVisible(true)}
+                style={styles.cameraOverlay}
+                hitSlop={8}
+              >
+                <Ionicons name="camera" size={14} color="#FFFFFF" />
+              </Pressable>
+            </Pressable>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Name</Text>
               <Text style={[styles.valueBold, { color: palette.text }]}>{member.name}</Text>
             </View>
@@ -1340,6 +1384,56 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
           )}
         </View>
       </Modal>
+
+      {/* ── Photo View Modal (WhatsApp style) ── */}
+      <Modal
+        visible={photoViewVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoViewVisible(false)}
+        statusBarTranslucent
+      >
+        <Pressable style={styles.photoModalOverlay} onPress={() => setPhotoViewVisible(false)}>
+          {/* Top bar */}
+          <View style={styles.photoModalTopBar}>
+            <View style={[styles.photoModalSmallAvatar, { backgroundColor: accent }]}>
+              <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 14 }}>
+                {member.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <Text style={styles.photoModalName} numberOfLines={1}>{member.name}</Text>
+            <Pressable onPress={() => setPhotoViewVisible(false)} hitSlop={12}>
+              <Ionicons name="close" size={26} color="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          {/* Big circle photo in center */}
+          <View style={styles.photoModalCenter}>
+            {member.photoUrl ? (
+              <Image
+                source={{ uri: `${BASE_URL}${member.photoUrl}` }}
+                style={styles.photoModalImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[styles.photoModalImage, { backgroundColor: accent, alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={{ color: '#FFF', fontSize: 72, fontWeight: '800' }}>
+                  {member.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Update button */}
+          <Pressable
+            style={styles.photoModalUpdateBtn}
+            onPress={() => { setPhotoViewVisible(false); setTimeout(handleUpdatePhoto, 300); }}
+          >
+            <Ionicons name="camera-outline" size={20} color="#FFFFFF" />
+            <Text style={styles.photoModalUpdateText}>Update Photo</Text>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1399,7 +1493,21 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   avatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontSize: 24, fontWeight: '800' },
-  labelSmall: { fontSize: 11.5, fontWeight: '600' },
+  avatarWrap: { position: 'relative', width: 64, height: 64, marginRight: 14 },
+  avatarImg: { width: 64, height: 64, borderRadius: 32 },
+  cameraOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#006666',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },  labelSmall: { fontSize: 11.5, fontWeight: '600' },
   value: { fontSize: 14, fontWeight: '600', marginTop: 2 },
   valueBold: { fontSize: 18, fontWeight: '800', marginTop: 2 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
@@ -1441,4 +1549,62 @@ const styles = StyleSheet.create({
   detailModalName: { fontSize: 17, fontWeight: '800', marginBottom: 12 },
   detailModalGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   detailModalCell: { width: '48%', marginBottom: 12 },
+
+  // Photo view modal
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 40,
+  },
+  photoModalTopBar: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 52,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  photoModalSmallAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalName: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  photoModalCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalImage: {
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  photoModalUpdateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+    borderRadius: 28,
+    marginBottom: 10,
+  },
+  photoModalUpdateText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

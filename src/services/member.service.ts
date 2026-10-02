@@ -158,6 +158,20 @@ export const deleteMember = async (id: string): Promise<void> => {
   await api.delete(`/api/members/${id}`);
 };
 
+export const updateMemberPhoto = async (memberId: string, photoUri: string): Promise<Member> => {
+  const formData = new FormData();
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(photoUri)).blob();
+    formData.append('photo', blob, 'photo.jpg');
+  } else {
+    formData.append('photo', { uri: photoUri, name: 'photo.jpg', type: 'image/jpeg' } as any);
+  }
+  const res = await api.patch(`/api/members/${memberId}/photo`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data.member;
+};
+
 export const createMemberAccount = async (memberId: string, password: string): Promise<void> => {
   await api.post(`/api/members/${memberId}/create-account`, { password });
 };

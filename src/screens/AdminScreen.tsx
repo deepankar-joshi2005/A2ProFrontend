@@ -71,10 +71,15 @@ interface Props {
   onLogout: () => void;
 }
 
+// Root tabs — switching between these resets the stack; pressing back here asks user if they want to exit
+const ROOT_VIEWS: AdminView[] = ['members', 'dashboard', 'reports', 'gym'];
+
 export default function AdminScreen({ onLogout }: Props) {
   // Staff lands on the same starting tab as admin - each screen gates its own content.
-  const [view, setView] = useState<AdminView>('members');
-  const [previousView, setPreviousView] = useState<AdminView>('members');
+  // A real stack (not just a single "previousView" slot) so back navigation works correctly
+  // no matter how many screens deep the user has gone (e.g. Members -> Member Detail -> Renew Plan).
+  const [viewStack, setViewStack] = useState<AdminView[]>(['members']);
+  const view = viewStack[viewStack.length - 1];
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Team Members edit-in-place state
@@ -114,13 +119,22 @@ export default function AdminScreen({ onLogout }: Props) {
   const [editingWorkoutPlan, setEditingWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [editingDietPlan, setEditingDietPlan] = useState<DietPlan | null>(null);
 
+  // Switching to a root tab replaces the whole stack (tabs are peers, not nested screens).
+  // Navigating to whatever is already the immediate parent in the stack (the common
+  // "onBack points at my parent list screen" pattern used throughout this file) pops
+  // instead of pushing, so the stack doesn't grow every time one of those fires.
+  // Anything else pushes onto the stack so back can unwind it step by step.
   const navigateTo = (newView: AdminView) => {
-    setPreviousView(view);
-    setView(newView);
+    setViewStack((s) => {
+      if (ROOT_VIEWS.includes(newView)) return [newView];
+      if (s.length > 1 && s[s.length - 2] === newView) return s.slice(0, -1);
+      return [...s, newView];
+    });
   };
 
-  // Root tabs — pressing back here asks user if they want to exit
-  const ROOT_VIEWS: AdminView[] = ['members', 'dashboard', 'reports', 'gym'];
+  const goBack = () => {
+    setViewStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
+  };
 
   // Hardware back button handler
   const handleHardwareBack = useCallback(() => {
@@ -137,10 +151,10 @@ export default function AdminScreen({ onLogout }: Props) {
       );
       return true; // consumed — don't exit immediately
     }
-    // Otherwise go back to previous view
-    setView(previousView);
+    // Otherwise pop back to the previous screen in the stack
+    goBack();
     return true;
-  }, [view, previousView]);
+  }, [view, viewStack]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
@@ -265,7 +279,7 @@ export default function AdminScreen({ onLogout }: Props) {
       )}
       {view === 'addMember' && (
         <AddMemberScreen
-          onBack={() => navigateTo(previousView)}
+          onBack={goBack}
           onSaved={() => {
             setRefreshKey((k) => k + 1);
             navigateTo('members');
@@ -282,10 +296,10 @@ export default function AdminScreen({ onLogout }: Props) {
       {view === 'renewPlan' && renewingMember && (
         <RenewPlanScreen
           member={renewingMember}
-          onBack={() => navigateTo(previousView)}
+          onBack={goBack}
           onRenewed={() => {
             setRefreshKey((k) => k + 1);
-            navigateTo(previousView);
+            goBack();
           }}
         />
       )}
@@ -293,7 +307,7 @@ export default function AdminScreen({ onLogout }: Props) {
         <MemberDetailScreen
           key={refreshKey}
           member={viewingMember}
-          onBack={() => navigateTo(previousView)}
+          onBack={goBack}
           onOpenRenewPlan={handleOpenRenewPlan}
           onNavigateGymServices={() => navigateTo('gymServices')}
           onNavigatePtPlans={() => navigateTo('ptPlans')}

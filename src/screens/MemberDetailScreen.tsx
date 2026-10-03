@@ -128,6 +128,7 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
   const [assignDietVisible, setAssignDietVisible] = useState(false);
   const [addServiceVisible, setAddServiceVisible] = useState(false);
   const [addMeasurementVisible, setAddMeasurementVisible] = useState(false);
+  const [allPlansVisible, setAllPlansVisible] = useState(false);
   const [attendanceMonth, setAttendanceMonth] = useState(new Date());
   const [attendanceHistory, setAttendanceHistory] = useState<AttendanceRecord[]>([]);
 
@@ -612,7 +613,7 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
             <Text style={[styles.sectionHeaderText, { color: palette.text }]}>Plans</Text>
             <Pressable
               hitSlop={8}
-              onPress={() => guard('memberships.edit', () => onOpenRenewPlan(member))}
+              onPress={() => guard('memberships.view', () => setAllPlansVisible(true))}
             >
               <Text style={{ color: accent, fontWeight: '700', fontSize: 12.5 }}>View All ({plan ? 1 : 0})</Text>
             </Pressable>
@@ -1382,6 +1383,89 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
               </Pressable>
             </View>
           )}
+        </View>
+      </Modal>
+
+      {/* ── All Plans Modal ── */}
+      <Modal visible={allPlansVisible} transparent animationType="fade" onRequestClose={() => setAllPlansVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setAllPlansVisible(false)} />
+          <View style={[styles.modalCard, { backgroundColor: palette.sheetBg, borderColor: palette.surfaceBorder, maxHeight: '80%' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <Text style={[styles.modalTitle, { color: palette.text, marginBottom: 0 }]}>All Plans</Text>
+              <Pressable onPress={() => setAllPlansVisible(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={palette.textMuted} />
+              </Pressable>
+            </View>
+
+            {plan ? (
+              <ScrollView style={{ maxHeight: 420 }}>
+                <View style={[styles.card, { backgroundColor: palette.cardBg, borderColor: palette.cardBorder, marginBottom: 0 }]}>
+                  <View style={styles.planNameRow}>
+                    <View>
+                      <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Plan Name</Text>
+                      <Text style={[styles.valueBold, { color: palette.text }]}>{plan.name}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 14 }}>
+                      <Pressable
+                        onPress={() => guard('memberships.edit', () => { setAllPlansVisible(false); onOpenRenewPlan(member); })}
+                        hitSlop={8}
+                      >
+                        <Ionicons name="create-outline" size={20} color={accent} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => guard('memberships.delete', () => { setAllPlansVisible(false); handleDeletePlan(); })}
+                        hitSlop={8}
+                      >
+                        <Ionicons name="trash-outline" size={20} color={palette.textMuted} />
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailGrid}>
+                    <View style={styles.detailCol}>
+                      <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Purchase Date</Text>
+                      <Text style={[styles.value, { color: palette.text }]}>{formatDate(purchaseDate)}</Text>
+                    </View>
+                    <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
+                      <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Expiry Date</Text>
+                      <Text style={[styles.value, { color: palette.text }]}>{member.planExpiryDate ? formatDate(member.planExpiryDate) : '-'}</Text>
+                    </View>
+                    <View style={styles.detailCol}>
+                      <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Complete Amount</Text>
+                      <Text style={[styles.value, { color: palette.text }]}>{formatINR(member.planAmount)}</Text>
+                    </View>
+                    <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
+                      <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Discount</Text>
+                      <Text style={[styles.value, { color: palette.text }]}>
+                        {member.discountType === 'percent' ? `${member.discountValue}%` : formatINR(member.discountValue)}
+                      </Text>
+                    </View>
+                    <View style={styles.detailCol}>
+                      <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Paid</Text>
+                      <Text style={[styles.value, { color: palette.statusActiveText }]}>{formatINR(member.paidAmount)}</Text>
+                    </View>
+                    <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
+                      <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Due Amount</Text>
+                      <Text style={[styles.value, { color: member.dueAmount > 0 ? palette.statusExpiredText : palette.text }]}>
+                        {formatINR(member.dueAmount)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            ) : (
+              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                <Text style={{ color: palette.textMuted }}>No active plan</Text>
+                <Pressable
+                  style={[styles.smallBtn, { backgroundColor: accent, marginTop: 10 }]}
+                  onPress={() => guard('memberships.edit', () => { setAllPlansVisible(false); onOpenRenewPlan(member); })}
+                >
+                  <Text style={styles.smallBtnText}>Assign Plan</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
         </View>
       </Modal>
 

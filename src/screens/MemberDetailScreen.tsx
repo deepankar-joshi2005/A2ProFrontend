@@ -22,6 +22,13 @@ import { usePermissions } from '../context/PermissionsContext';
 import AccessDenied from '../components/AccessDenied';
 import { formatDate } from '../utils/date';
 import { BASE_URL } from '../config/api';
+
+// Helper: build image URI — Cloudinary URLs are already full https://, local paths need BASE_URL prefix
+const getPhotoUri = (photoUrl: string | null): string | null => {
+  if (!photoUrl) return null;
+  if (photoUrl.startsWith('http')) return photoUrl;
+  return `${BASE_URL}${photoUrl}`;
+};
 import {
   getMember,
   clearMemberPlan,
@@ -542,7 +549,7 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
             >
               {member.photoUrl ? (
                 <Image
-                  source={{ uri: `${BASE_URL}${member.photoUrl}` }}
+                  source={{ uri: `getPhotoUri(member.photoUrl)!` }}
                   style={styles.avatarImg}
                 />
               ) : (
@@ -1014,7 +1021,7 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
             ) : (
               documents.map((doc) => (
                 <View key={doc._id} style={styles.assignedRow}>
-                  <Image source={{ uri: doc.fileUrl }} style={{ width: 40, height: 40, borderRadius: 8, marginRight: 10 }} />
+                  <Image source={{ uri: getPhotoUri(doc.fileUrl) ?? doc.fileUrl }} style={{ width: 40, height: 40, borderRadius: 8, marginRight: 10 }} />
                   <Text style={{ color: palette.text, flex: 1 }} numberOfLines={1}>{doc.fileName}</Text>
                   <Pressable onPress={() => guard('members.edit', () => handleDeleteDocument(doc))} hitSlop={8}>
                     <Ionicons name="trash-outline" size={18} color={palette.textMuted} />
@@ -1495,7 +1502,7 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
           <View style={styles.photoModalCenter}>
             {member.photoUrl ? (
               <Image
-                source={{ uri: `${BASE_URL}${member.photoUrl}` }}
+                source={{ uri: `getPhotoUri(member.photoUrl)!` }}
                 style={styles.photoModalImage}
                 resizeMode="cover"
               />

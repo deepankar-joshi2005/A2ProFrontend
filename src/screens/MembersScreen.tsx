@@ -20,6 +20,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDate } from '../utils/date';
 import { BASE_URL } from '../config/api';
+
+// Helper: handles both Cloudinary full URLs and legacy local paths
+const getPhotoUri = (photoUrl: string | null): string | null => {
+  if (!photoUrl) return null;
+  if (photoUrl.startsWith('http')) return photoUrl;
+  return `${BASE_URL}${photoUrl}`;
+};
 import {
   listMembers,
   listPlans,
@@ -665,7 +672,7 @@ export default function MembersScreen({
           <View style={photoStyles.center}>
             {photoViewMember?.photoUrl ? (
               <Image
-                source={{ uri: `${BASE_URL}${photoViewMember.photoUrl}` }}
+                source={{ uri: `getPhotoUri(photoViewMember.photoUrl)!` }}
                 style={photoStyles.bigImage}
                 resizeMode="cover"
               />
@@ -806,7 +813,7 @@ function MemberCard({
         >
           {member.photoUrl ? (
             <Image
-              source={{ uri: `${BASE_URL}${member.photoUrl}` }}
+              source={{ uri: `getPhotoUri(member.photoUrl)!` }}
               style={{ width: 54, height: 54, borderRadius: 27 }}
               resizeMode="cover"
             />

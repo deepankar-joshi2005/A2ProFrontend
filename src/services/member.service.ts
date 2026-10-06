@@ -81,7 +81,14 @@ export const getMyProfile = async (): Promise<MyProfileResponse> => {
 
 export const listMembers = async (): Promise<Member[]> => {
   const res = await api.get('/api/members');
-  return res.data.members;
+  const members: Member[] = res.data.members;
+  // Sort by numeric membershipId (1,2,3... not 1,10,2...)
+  return members.sort((a, b) => {
+    const aNum = Number(a.membershipId);
+    const bNum = Number(b.membershipId);
+    if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+    return a.membershipId.localeCompare(b.membershipId);
+  });
 };
 
 export const getMember = async (id: string): Promise<Member> => {

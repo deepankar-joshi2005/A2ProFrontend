@@ -83,16 +83,6 @@ const STATUS_OPTIONS: SheetOption[] = [
   { label: 'Total PT Plans', value: 'total_pt' },
 ];
 
-const SORT_OPTIONS: SheetOption[] = [
-  { label: 'Needs Attention First', value: 'attention' },
-  { label: 'Newly Joined Members First', value: 'newly_joined' },
-  { label: 'Highest Due Amount First', value: 'highest_due' },
-  { label: 'Expiring Membership First', value: 'expiring_first' },
-  { label: 'Longest Membership Validity First', value: 'longest_validity' },
-  { label: 'Newly Purchased Membership First', value: 'newly_purchased' },
-  { label: 'Recently Updated Members First', value: 'recently_updated' },
-];
-
 const GENDER_OPTIONS: SheetOption[] = [
   { label: 'Select Gender', value: 'all' },
   { label: 'Male', value: 'male' },
@@ -121,7 +111,6 @@ export default function MembersScreen({
 
   // Filters state
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter || 'all');
-  const [sortMode, setSortMode] = useState('attention');
   const [planFilter, setPlanFilter] = useState('all');
   const [batchFilter, setBatchFilter] = useState('all');
   const [genderFilter, setGenderFilter] = useState('all');
@@ -143,7 +132,7 @@ export default function MembersScreen({
     }
   }, [initialStatusFilter]);
 
-  const [activeSheet, setActiveSheet] = useState<'status' | 'sort' | 'plan' | 'batch' | 'gender' | null>(null);
+  const [activeSheet, setActiveSheet] = useState<'status' | 'plan' | 'batch' | 'gender' | null>(null);
 
   const fetchMembers = async () => {
     try {
@@ -269,40 +258,16 @@ export default function MembersScreen({
       });
     }
 
-    switch (sortMode) {
-      case 'attention':
-        list.sort((a, b) => {
-          const score = (m: Member) => {
-            const daysLeft = (new Date(m.planExpiryDate || 0).getTime() - now) / MS_PER_DAY;
-            return (m.dueAmount > 0 ? 1000 : 0) + (daysLeft <= 7 ? 500 : 0) - daysLeft;
-          };
-          return score(b) - score(a);
-        });
-        break;
-      case 'newly_joined':
-        list.sort((a, b) => new Date(b.joiningDate).getTime() - new Date(a.joiningDate).getTime());
-        break;
-      case 'highest_due':
-        list.sort((a, b) => b.dueAmount - a.dueAmount);
-        break;
-      case 'expiring_first':
-        list.sort((a, b) => new Date(a.planExpiryDate || 0).getTime() - new Date(b.planExpiryDate || 0).getTime());
-        break;
-      case 'longest_validity':
-        list.sort((a, b) => new Date(b.planExpiryDate || 0).getTime() - new Date(a.planExpiryDate || 0).getTime());
-        break;
-      case 'newly_purchased':
-        list.sort((a, b) => new Date(b.createdAt || b.paymentDate || 0).getTime() - new Date(a.createdAt || a.paymentDate || 0).getTime());
-        break;
-      case 'recently_updated':
-        list.sort((a, b) => new Date((b as any).updatedAt || b.createdAt || 0).getTime() - new Date((a as any).updatedAt || a.createdAt || 0).getTime());
-        break;
-      default:
-        break;
-    }
+    // Default sort by numeric membershipId ascending (1, 2, 3...)
+    list.sort((a, b) => {
+      const aNum = Number(a.membershipId);
+      const bNum = Number(b.membershipId);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return a.membershipId.localeCompare(b.membershipId);
+    });
 
     return list;
-  }, [members, searchQuery, searchByIdOnly, statusFilter, planFilter, batchFilter, genderFilter, sortMode]);
+  }, [members, searchQuery, searchByIdOnly, statusFilter, planFilter, batchFilter, genderFilter]);
 
   const handleDelete = (member: Member) => setDeleteTarget(member);
 
@@ -353,7 +318,6 @@ export default function MembersScreen({
   const openMenu = () => setLogoutVisible(true);
 
   const statusLabel = STATUS_OPTIONS.find((o) => o.value === statusFilter)?.label ?? 'All';
-  const sortLabel = SORT_OPTIONS.find((o) => o.value === sortMode)?.label ?? 'Needs Attention First';
   const planLabel = planOptions.find((o) => o.value === planFilter)?.label ?? 'All Plans';
   const batchLabel = batchOptions.find((o) => o.value === batchFilter)?.label ?? 'Select Batch';
   const genderLabel = GENDER_OPTIONS.find((o) => o.value === genderFilter)?.label ?? 'Select Gender';
@@ -431,31 +395,6 @@ export default function MembersScreen({
               name="chevron-down"
               size={14}
               color={statusFilter !== 'all' ? palette.text : palette.textMuted}
-            />
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.chip,
-              { backgroundColor: palette.cardBg, borderColor: palette.cardBorder },
-              sortMode !== 'attention' && { backgroundColor: palette.accent + '25', borderColor: palette.accent },
-            ]}
-            onPress={() => setActiveSheet('sort')}
-          >
-            <Text
-              style={[
-                styles.chipText,
-                { color: palette.textMuted },
-                sortMode !== 'attention' && { color: palette.text, fontWeight: '700' },
-              ]}
-              numberOfLines={1}
-            >
-              {sortLabel}
-            </Text>
-            <Ionicons
-              name="chevron-down"
-              size={14}
-              color={sortMode !== 'attention' ? palette.text : palette.textMuted}
             />
           </Pressable>
 
@@ -616,13 +555,6 @@ export default function MembersScreen({
         onClose={() => setActiveSheet(null)}
       />
       <OptionSheet
-        visible={activeSheet === 'sort'}
-        options={SORT_OPTIONS}
-        selectedValue={sortMode}
-        onSelect={setSortMode}
-        onClose={() => setActiveSheet(null)}
-      />
-      <OptionSheet
         visible={activeSheet === 'plan'}
         options={planOptions}
         selectedValue={planFilter}
@@ -672,7 +604,7 @@ export default function MembersScreen({
           <View style={photoStyles.center}>
             {photoViewMember?.photoUrl ? (
               <Image
-                source={{ uri: `getPhotoUri(photoViewMember.photoUrl)!` }}
+                source={{ uri: getPhotoUri(photoViewMember.photoUrl)! }}
                 style={photoStyles.bigImage}
                 resizeMode="cover"
               />
@@ -813,7 +745,7 @@ function MemberCard({
         >
           {member.photoUrl ? (
             <Image
-              source={{ uri: `getPhotoUri(member.photoUrl)!` }}
+              source={{ uri: getPhotoUri(member.photoUrl)! }}
               style={{ width: 54, height: 54, borderRadius: 27 }}
               resizeMode="cover"
             />

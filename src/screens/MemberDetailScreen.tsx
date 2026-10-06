@@ -549,8 +549,9 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
             >
               {member.photoUrl ? (
                 <Image
-                  source={{ uri: `getPhotoUri(member.photoUrl)!` }}
+                  source={{ uri: getPhotoUri(member.photoUrl)! }}
                   style={styles.avatarImg}
+                  onError={() => setMember((m) => ({ ...m, photoUrl: null }))}
                 />
               ) : (
                 <View style={[styles.avatarImg, { backgroundColor: accent, alignItems: 'center', justifyContent: 'center' }]}>
@@ -1502,7 +1503,7 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
           <View style={styles.photoModalCenter}>
             {member.photoUrl ? (
               <Image
-                source={{ uri: `getPhotoUri(member.photoUrl)!` }}
+                source={{ uri: getPhotoUri(member.photoUrl)! }}
                 style={styles.photoModalImage}
                 resizeMode="cover"
               />

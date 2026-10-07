@@ -33,6 +33,7 @@ export default function WhatsappOnboardingModal({ visible, member, password, onD
   const handleSend = async () => {
     setSending(true);
     try {
+      const dueAmount = member.dueAmount ?? 0;
       const message =
         `Hello ${member.name},\n\n` +
         `Welcome to the gym! Your membership is now active.\n\n` +
@@ -41,7 +42,8 @@ export default function WhatsappOnboardingModal({ visible, member, password, onD
         `Plan: ${member.planId?.name || '-'}\n` +
         `Start Date: ${formatDate(member.joiningDate)}\n` +
         `Valid Till: ${member.planExpiryDate ? formatDate(member.planExpiryDate) : '-'}\n` +
-        `Amount Paid: Rs ${member.paidAmount}\n` +
+        `Amount Paid: Rs ${member.paidAmount ?? 0}\n` +
+        `Due Amount: Rs ${dueAmount}\n` +
         (businessPhone ? `\nFor any queries, contact us at ${businessPhone}.\n` : '\n') +
         `\n--- App Login Details ---\n` +
         `Login to our app with the credentials below to view your membership, workout & diet plans, and more:\n` +

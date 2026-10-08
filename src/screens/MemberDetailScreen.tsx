@@ -21,6 +21,7 @@ import { useTheme } from '../context/ThemeContext';
 import { usePermissions } from '../context/PermissionsContext';
 import AccessDenied from '../components/AccessDenied';
 import { formatDate } from '../utils/date';
+import { getPlanStatus } from '../utils/planStatus';
 import { BASE_URL } from '../config/api';
 
 // Helper: build image URI — Cloudinary URLs are already full https://, local paths need BASE_URL prefix
@@ -655,7 +656,9 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
                   </View>
                   <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
                     <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Expiry Date</Text>
-                    <Text style={[styles.value, { color: palette.text }]}>{member.planExpiryDate ? formatDate(member.planExpiryDate) : '-'}</Text>
+                    <Text style={[styles.value, { color: getPlanStatus(member.planExpiryDate).color, fontWeight: '800' }]}>
+                      {member.planExpiryDate ? formatDate(member.planExpiryDate) : '-'}
+                    </Text>
                   </View>
                   <View style={styles.detailCol}>
                     <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Complete Amount</Text>
@@ -1437,7 +1440,9 @@ export default function MemberDetailScreen({ member: initialMember, onBack, onOp
                     </View>
                     <View style={[styles.detailCol, { alignItems: 'flex-end' }]}>
                       <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Expiry Date</Text>
-                      <Text style={[styles.value, { color: palette.text }]}>{member.planExpiryDate ? formatDate(member.planExpiryDate) : '-'}</Text>
+                      <Text style={[styles.value, { color: getPlanStatus(member.planExpiryDate).color, fontWeight: '800' }]}>
+                        {member.planExpiryDate ? formatDate(member.planExpiryDate) : '-'}
+                      </Text>
                     </View>
                     <View style={styles.detailCol}>
                       <Text style={[styles.labelSmall, { color: palette.textMuted }]}>Complete Amount</Text>

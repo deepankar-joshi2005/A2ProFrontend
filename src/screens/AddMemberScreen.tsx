@@ -30,6 +30,7 @@ import {
   Member,
   MembershipPlan,
 } from '../services/member.service';
+import { calculateDefaultEndDate } from '../utils/planStatus';
 
 interface Props {
   onBack: () => void;
@@ -60,6 +61,7 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
   const [planPickerVisible, setPlanPickerVisible] = useState(false);
 
   const [joiningDate, setJoiningDate] = useState<Date | null>(new Date());
+  const [planExpiryDate, setPlanExpiryDate] = useState<Date | null>(null);
   const [paymentDate, setPaymentDate] = useState<Date | null>(null);
   const [paidAmount, setPaidAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
@@ -86,7 +88,11 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
     listPlans()
       .then((data) => {
         setPlans(data);
-        if (data.length > 0) setPlanId(data[0]._id);
+        if (data.length > 0) {
+          setPlanId(data[0]._id);
+          const defaultEnd = calculateDefaultEndDate(new Date(), data[0]);
+          setPlanExpiryDate(defaultEnd);
+        }
       })
       .catch(() => {});
     getNextMembershipId()
@@ -119,6 +125,22 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
 
   const selectedPlan = plans.find((p) => p._id === planId) ?? null;
   const planAmount = selectedPlan?.amount ?? 0;
+
+  const handleSelectPlan = (id: string) => {
+    setPlanId(id);
+    const plan = plans.find((p) => p._id === id);
+    if (plan) {
+      const baseStart = joiningDate || new Date();
+      setPlanExpiryDate(calculateDefaultEndDate(baseStart, plan));
+    }
+  };
+
+  const handleJoiningDateChange = (date: Date | null) => {
+    setJoiningDate(date);
+    if (date && selectedPlan) {
+      setPlanExpiryDate(calculateDefaultEndDate(date, selectedPlan));
+    }
+  };
 
   const dueAmount = useMemo(() => {
     const discount =
@@ -177,8 +199,9 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
     if (!membershipId.trim()) nextErrors.membershipId = 'Membership ID is required';
     else if (membershipIdStatus === 'taken') nextErrors.membershipId = 'This Membership ID is already in use';
     if (!planId) nextErrors.plan = 'Select a gym plan';
-    if (!joiningDate) nextErrors.joiningDate = 'Select a joining date';
-    if (!isValidEmail(email)) nextErrors.email = 'Enter a valid email address';
+    if (!joiningDate) nextErrors.joiningDate = 'Plan start date is required';
+    if (!planExpiryDate) nextErrors.planExpiryDate = 'Plan end date is required';
+    if (email.trim() && !isValidEmail(email)) nextErrors.email = 'Enter a valid email address';
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -194,6 +217,8 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
           membershipId: membershipId.trim(),
           planId: planId as string,
           joiningDate: (joiningDate as Date).toISOString(),
+          planStartDate: (joiningDate as Date).toISOString(),
+          planExpiryDate: (planExpiryDate as Date).toISOString(),
           paymentDate: paymentDate ? paymentDate.toISOString() : undefined,
           paidAmount: Number(paidAmount) || 0,
           paymentMethod: paymentMethod ?? undefined,
@@ -347,9 +372,13 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
 
           <Text style={[styles.plainAmountText, { color: palette.text }]}>Plan Amount: ₹ {planAmount.toLocaleString('en-IN')}</Text>
 
-          <Text style={[styles.groupLabel, { color: palette.textMuted }]}>Select Joining Date</Text>
-          <DateInputField icon="calendar-outline" placeholder="Select Joining Date" value={joiningDate} onChange={setJoiningDate} />
+          <Text style={[styles.groupLabel, { color: palette.textMuted }]}>Plan Start Date *</Text>
+          <DateInputField icon="calendar-outline" placeholder="Plan Start Date *" value={joiningDate} onChange={handleJoiningDateChange} />
           {!!errors.joiningDate && <Text style={[styles.errorText, { color: palette.statusExpiredText }]}>{errors.joiningDate}</Text>}
+
+          <Text style={[styles.groupLabel, { color: palette.textMuted }]}>Plan End Date *</Text>
+          <DateInputField icon="calendar-outline" placeholder="Plan End Date *" value={planExpiryDate} onChange={setPlanExpiryDate} />
+          {!!errors.planExpiryDate && <Text style={[styles.errorText, { color: palette.statusExpiredText }]}>{errors.planExpiryDate}</Text>}
 
           <Text style={[styles.groupLabel, { color: palette.textMuted }]}>Payment Date</Text>
           <DateInputField icon="calendar-outline" placeholder="Payment Date" value={paymentDate} onChange={setPaymentDate} />
@@ -480,7 +509,7 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
         title="Select Gym Plan"
         options={plans.map((p) => ({ label: `${p.name} (${p.amount})`, value: p._id }))}
         selectedValue={planId}
-        onSelect={setPlanId}
+        onSelect={handleSelectPlan}
         onClose={() => setPlanPickerVisible(false)}
       />
       <OptionSheet

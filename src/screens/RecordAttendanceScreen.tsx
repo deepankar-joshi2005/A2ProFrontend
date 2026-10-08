@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDate } from '../utils/date';
+import { getPlanStatus } from '../utils/planStatus';
 import { listMembers, getMember, Member } from '../services/member.service';
 import {
   getTodayAttendance,
@@ -404,7 +405,7 @@ export default function RecordAttendanceScreen({ onBack, initialTab = 'attendanc
                       <View style={styles.fieldRow}>
                         <View style={[styles.fieldBlock, styles.fieldCol]}>
                           <Text style={[styles.fieldLabel, { color: palette.textFaint }]}>Plan Expiry:</Text>
-                          <Text style={[styles.fieldValue, { color: palette.text }]} numberOfLines={1}>{formatDate(item.planExpiryDate)}</Text>
+                          <Text style={[styles.fieldValue, { color: getPlanStatus(item.planExpiryDate).color, fontWeight: '800' }]} numberOfLines={1}>{formatDate(item.planExpiryDate)}</Text>
                         </View>
                         <View style={[styles.fieldBlock, styles.fieldCol]}>
                           <Text style={[styles.fieldLabel, styles.alignRight, { color: palette.textFaint }]}>Due Amount:</Text>

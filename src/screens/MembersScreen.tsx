@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDate } from '../utils/date';
+import { getPlanStatus } from '../utils/planStatus';
 import { BASE_URL } from '../config/api';
 
 // Helper: handles both Cloudinary full URLs and legacy local paths
@@ -722,12 +723,23 @@ function MemberCard({
     { icon: 'ban-outline', label: member.isBlocked ? 'Unblock' : 'Block', onPress: onToggleBlock },
   ];
 
+  const statusInfo = getPlanStatus(member.planExpiryDate);
+
   return (
     <Pressable
       onPress={onOpenDetail}
       style={[styles.card, { backgroundColor: palette.cardBg, borderColor: palette.cardBorder }]}
     >
       <View style={[styles.cardAccent, { backgroundColor: palette.accent }]} />
+
+      {/* Top Corner Payment/Plan Status Light ("Batti") */}
+      <View style={[styles.cornerStatusBadge, { backgroundColor: statusInfo.bgColor, borderColor: statusInfo.color }]}>
+        <View style={[styles.statusLightDot, { backgroundColor: statusInfo.lightColor, shadowColor: statusInfo.lightColor }]} />
+        <Text style={[styles.cornerStatusText, { color: statusInfo.color }]}>
+          {statusInfo.label}
+        </Text>
+      </View>
+
       <Pressable
         style={styles.cardTrash}
         onPress={onDelete}
@@ -778,7 +790,7 @@ function MemberCard({
           <View style={styles.fieldRow}>
             <View style={[styles.fieldBlock, styles.fieldCol]}>
               <Text style={[styles.fieldLabel, { color: palette.textFaint }]}>Plan Expiry:</Text>
-              <Text style={[styles.fieldValue, { color: palette.text }]} numberOfLines={1}>{formatDate(member.planExpiryDate)}</Text>
+              <Text style={[styles.fieldValue, { color: statusInfo.color, fontWeight: '800' }]} numberOfLines={1}>{formatDate(member.planExpiryDate)}</Text>
             </View>
             <View style={[styles.fieldBlock, styles.fieldCol]}>
               <Text style={[styles.fieldLabel, styles.alignRight, { color: palette.textFaint }]}>Due Amount:</Text>
@@ -896,7 +908,34 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
   },
   cardAccent: { position: 'absolute', top: 0, left: 0, bottom: 0, width: 4 },
-  cardTrash: { position: 'absolute', top: 16, right: 16, zIndex: 1 },
+  cardTrash: { position: 'absolute', top: 14, right: 14, zIndex: 1 },
+  cornerStatusBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    zIndex: 1,
+  },
+  statusLightDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  cornerStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', paddingTop: 18, paddingBottom: 16, paddingRight: 36 },
   avatar: {
     width: 54,

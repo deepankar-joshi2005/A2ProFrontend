@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDate } from '../utils/date';
+import { getPlanStatus, calculateDefaultEndDate } from '../utils/planStatus';
 import {
   listPlans,
   renewMemberPlan,
@@ -24,6 +25,7 @@ import {
 } from '../services/member.service';
 import OptionSheet, { SheetOption } from '../components/OptionSheet';
 import DateInputField from '../components/DateInputField';
+import WhatsappRenewModal from '../components/WhatsappRenewModal';
 import { useTheme } from '../context/ThemeContext';
 
 interface Props {
@@ -48,12 +50,9 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
   const [planId, setPlanId] = useState<string | null>(member.planId?._id || null);
   const [planPickerVisible, setPlanPickerVisible] = useState(false);
 
-  // Expiry date math: default start date = current planExpiryDate if in future, else today
-  const currentExpiry = new Date(member.planExpiryDate || 0);
   const now = new Date();
-  const defaultStart = currentExpiry > now ? currentExpiry : now;
-
-  const [startDate, setStartDate] = useState<Date | null>(defaultStart);
+  const [startDate, setStartDate] = useState<Date | null>(now);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [paymentDate, setPaymentDate] = useState<Date | null>(now);
   const [paidAmount, setPaidAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string | null>(member.paymentMethod || 'Cash');
@@ -63,6 +62,7 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
   const [discountValue, setDiscountValue] = useState('');
   const [admissionFees, setAdmissionFees] = useState('');
   const [saving, setSaving] = useState(false);
+  const [renewedMember, setRenewedMember] = useState<Member | null>(null);
 
   useEffect(() => {
     listPlans()
@@ -70,6 +70,7 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
         setPlans(data);
         if (!planId && data.length > 0) {
           setPlanId(data[0]._id);
+          setEndDate(calculateDefaultEndDate(now, data[0]));
         }
       })
       .catch(() => {});
@@ -77,6 +78,28 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
 
   const selectedPlan = plans.find((p) => p._id === planId) ?? member.planId ?? null;
   const planAmount = selectedPlan?.amount ?? 0;
+
+  useEffect(() => {
+    if (selectedPlan && startDate) {
+      setEndDate(calculateDefaultEndDate(startDate, selectedPlan));
+    }
+  }, [selectedPlan?._id]);
+
+  const handleSelectPlan = (id: string) => {
+    setPlanId(id);
+    const plan = plans.find((p) => p._id === id);
+    if (plan) {
+      const baseStart = startDate || new Date();
+      setEndDate(calculateDefaultEndDate(baseStart, plan));
+    }
+  };
+
+  const handleStartDateChange = (date: Date | null) => {
+    setStartDate(date);
+    if (date && selectedPlan) {
+      setEndDate(calculateDefaultEndDate(date, selectedPlan));
+    }
+  };
 
   const dueAmount = useMemo(() => {
     const discount =
@@ -91,11 +114,20 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
       Alert.alert('Error', 'Please select a gym plan');
       return;
     }
+    if (!startDate) {
+      Alert.alert('Error', 'Please select Plan Start Date');
+      return;
+    }
+    if (!endDate) {
+      Alert.alert('Error', 'Please select Plan End Date');
+      return;
+    }
     setSaving(true);
     try {
       const updated = await renewMemberPlan(member._id, {
         planId,
-        planStartDate: startDate ? startDate.toISOString() : undefined,
+        planStartDate: startDate.toISOString(),
+        planExpiryDate: endDate.toISOString(),
         paymentDate: paymentDate ? paymentDate.toISOString() : undefined,
         paidAmount: Number(paidAmount) || 0,
         paymentMethod: paymentMethod ?? undefined,
@@ -105,8 +137,7 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
         comments,
       });
 
-      Alert.alert('Plan Renewed!', `Membership renewed for ${updated.name}. New Expiry: ${formatDate(updated.planExpiryDate)}`);
-      onRenewed();
+      setRenewedMember(updated);
     } catch (err: any) {
       Alert.alert('Renewal Failed', err?.response?.data?.message || 'Could not renew plan');
     } finally {
@@ -140,14 +171,14 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
               <Text style={[styles.bannerMid, { color: palette.textMuted }]}>
                 M ID: {member.membershipId} | Mobile: {member.mobile}
               </Text>
-              <Text style={[styles.bannerExpiry, { color: isDark ? palette.accent : '#006666' }]}>
+              <Text style={[styles.bannerExpiry, { color: getPlanStatus(member.planExpiryDate).color }]}>
                 Current Expiry: {formatDate(member.planExpiryDate)}
               </Text>
             </View>
           </View>
 
           {/* Select Gym Plan Dropdown */}
-          <Text style={[styles.groupLabel, { color: palette.textMuted }]}>Select Gym Plan</Text>
+          <Text style={[styles.groupLabel, { color: palette.textMuted }]}>Select Gym Plan *</Text>
           <Pressable
             style={[styles.inputWrap, { backgroundColor: palette.inputBg, borderColor: palette.inputBorder }]}
             onPress={() => setPlanPickerVisible(true)}
@@ -167,9 +198,18 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
           <Text style={[styles.groupLabel, { color: palette.textMuted }]}>Plan Start Date *</Text>
           <DateInputField
             icon="calendar-outline"
-            placeholder="Plan Start Date"
+            placeholder="Plan Start Date *"
             value={startDate}
-            onChange={setStartDate}
+            onChange={handleStartDateChange}
+          />
+
+          {/* Plan End Date */}
+          <Text style={[styles.groupLabel, { color: palette.textMuted }]}>Plan End Date *</Text>
+          <DateInputField
+            icon="calendar-outline"
+            placeholder="Plan End Date *"
+            value={endDate}
+            onChange={setEndDate}
           />
 
           {/* Payment Date */}
@@ -297,7 +337,7 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
         title="Select Gym Plan"
         options={plans.map((p) => ({ label: `${p.name} (${p.amount})`, value: p._id }))}
         selectedValue={planId}
-        onSelect={setPlanId}
+        onSelect={handleSelectPlan}
         onClose={() => setPlanPickerVisible(false)}
       />
       <OptionSheet
@@ -307,6 +347,20 @@ export default function RenewPlanScreen({ member, onBack, onRenewed }: Props) {
         selectedValue={paymentMethod}
         onSelect={setPaymentMethod}
         onClose={() => setMethodPickerVisible(false)}
+      />
+
+      <WhatsappRenewModal
+        visible={!!renewedMember}
+        member={renewedMember || member}
+        planName={selectedPlan?.name}
+        startDate={startDate}
+        expiryDate={renewedMember?.planExpiryDate}
+        paidAmount={Number(paidAmount) || 0}
+        dueAmount={dueAmount}
+        onDone={() => {
+          setRenewedMember(null);
+          onRenewed();
+        }}
       />
     </View>
   );

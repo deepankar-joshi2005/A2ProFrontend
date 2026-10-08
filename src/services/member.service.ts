@@ -33,6 +33,7 @@ export interface Member {
   discountValue: number;
   admissionFees: number;
   dueAmount: number;
+  planStartDate?: string | null;
   planExpiryDate: string | null;
   email: string;
   dob: string | null;
@@ -50,6 +51,8 @@ export interface CreateMemberInput {
   membershipId: string;
   planId: string;
   joiningDate: string;
+  planStartDate?: string;
+  planExpiryDate?: string;
   paymentDate?: string;
   paidAmount: number;
   paymentMethod?: string;
@@ -186,6 +189,7 @@ export const createMemberAccount = async (memberId: string, password: string): P
 export interface RenewPlanInput {
   planId: string;
   planStartDate?: string;
+  planExpiryDate?: string;
   paymentDate?: string;
   paidAmount?: number;
   paymentMethod?: string;

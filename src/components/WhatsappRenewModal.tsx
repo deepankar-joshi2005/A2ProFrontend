@@ -10,11 +10,24 @@ import { formatDate } from '../utils/date';
 interface Props {
   visible: boolean;
   member: Member | null;
-  password: string;
+  planName?: string;
+  startDate?: Date | null;
+  expiryDate?: string | Date | null;
+  paidAmount?: number;
+  dueAmount?: number;
   onDone: () => void;
 }
 
-export default function WhatsappOnboardingModal({ visible, member, password, onDone }: Props) {
+export default function WhatsappRenewModal({
+  visible,
+  member,
+  planName,
+  startDate,
+  expiryDate,
+  paidAmount,
+  dueAmount,
+  onDone,
+}: Props) {
   const [sending, setSending] = useState(false);
   const [businessName, setBusinessName] = useState('A2 Pro Fitness');
   const [businessPhone, setBusinessPhone] = useState('');
@@ -30,29 +43,36 @@ export default function WhatsappOnboardingModal({ visible, member, password, onD
 
   if (!member) return null;
 
+  const displayPlanName =
+    planName ||
+    (typeof member.planId === 'object' && member.planId ? member.planId.name : null) ||
+    'Gym Membership';
+  const displayStartDate = startDate ? formatDate(startDate) : (member.joiningDate ? formatDate(member.joiningDate) : '-');
+  const displayExpiryDate = expiryDate
+    ? formatDate(expiryDate)
+    : member.planExpiryDate
+    ? formatDate(member.planExpiryDate)
+    : '-';
+  const displayPaid = paidAmount ?? member.paidAmount ?? 0;
+  const displayDue = dueAmount ?? member.dueAmount ?? 0;
+
   const handleSend = async () => {
     setSending(true);
     try {
-      const dueAmount = member.dueAmount ?? 0;
-      const hasLoginDetails = !!(member.email && password);
       const message =
         `Hello ${member.name},\n\n` +
-        `Welcome to the gym! Your membership is now active.\n\n` +
-        `--- Membership Details ---\n` +
+        `Your membership plan has been successfully renewed! 🎉\n\n` +
+        `--- Plan Renewal Details ---\n` +
         `Gym: ${businessName}\n` +
-        `Plan: ${member.planId?.name || '-'}\n` +
-        `Start Date: ${formatDate(member.joiningDate)}\n` +
-        `Valid Till: ${member.planExpiryDate ? formatDate(member.planExpiryDate) : '-'}\n` +
-        `Amount Paid: Rs ${member.paidAmount ?? 0}\n` +
-        `Due Amount: Rs ${dueAmount}\n` +
+        `Membership ID: ${member.membershipId}\n` +
+        `Plan: ${displayPlanName}\n` +
+        `Start Date: ${displayStartDate}\n` +
+        `Valid Till: ${displayExpiryDate}\n` +
+        `Amount Paid: Rs ${displayPaid}\n` +
+        `Due Amount: Rs ${displayDue}\n` +
         (businessPhone ? `\nFor any queries, contact us at ${businessPhone}.\n` : '\n') +
-        (hasLoginDetails
-          ? `\n--- App Login Details ---\n` +
-            `Login to our app with the credentials below to view your membership, workout & diet plans, and more:\n` +
-            `Email: ${member.email}\n` +
-            `Password: ${password}\n\n` +
-            `Keep this information safe. See you at the gym!`
-          : `\nSee you at the gym!`);
+        `Thank you for staying fit with us! See you at the gym! 💪`;
+
       const url = `https://wa.me/91${member.mobile}?text=${encodeURIComponent(message)}`;
       await Linking.openURL(url);
       onDone();
@@ -67,26 +87,30 @@ export default function WhatsappOnboardingModal({ visible, member, password, onD
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onDone}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <Ionicons name="logo-whatsapp" size={40} color={PALETTE.success} style={{ marginBottom: 12 }} />
-          <Text style={styles.title}>Member Registered</Text>
+          <Ionicons name="logo-whatsapp" size={44} color={PALETTE.success} style={{ marginBottom: 10 }} />
+          <Text style={styles.title}>Plan Renewed Successfully!</Text>
           <Text style={styles.subtitle}>
-            Send {member.name}'s app login details to them on WhatsApp.
+            Send membership renewal details to {member.name} on WhatsApp.
           </Text>
 
           <View style={styles.readOnlyRow}>
-            <Ionicons name="mail-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
-            <Text style={styles.readOnlyText}>{member.email}</Text>
+            <Ionicons name="person-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
+            <Text style={styles.readOnlyText} numberOfLines={1}>{member.name} (MID: {member.membershipId})</Text>
           </View>
           <View style={styles.readOnlyRow}>
             <Ionicons name="call-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
             <Text style={styles.readOnlyText}>+91 {member.mobile}</Text>
           </View>
           <View style={styles.readOnlyRow}>
-            <Ionicons name="lock-closed-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
-            <Text style={styles.readOnlyText}>{password}</Text>
+            <Ionicons name="barbell-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
+            <Text style={styles.readOnlyText} numberOfLines={1}>Plan: {displayPlanName}</Text>
+          </View>
+          <View style={styles.readOnlyRow}>
+            <Ionicons name="calendar-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
+            <Text style={styles.readOnlyText} numberOfLines={1}>Validity: {displayStartDate} to {displayExpiryDate}</Text>
           </View>
 
-          <Pressable onPress={handleSend} disabled={sending}>
+          <Pressable onPress={handleSend} disabled={sending} style={{ width: '100%' }}>
             <LinearGradient
               colors={[PALETTE.redSoft, PALETTE.red, PALETTE.redDeep]}
               start={{ x: 0, y: 0 }}
@@ -96,7 +120,10 @@ export default function WhatsappOnboardingModal({ visible, member, password, onD
               {sending ? (
                 <ActivityIndicator color={PALETTE.white} />
               ) : (
-                <Text style={styles.ctaText}>SEND VIA WHATSAPP</Text>
+                <View style={styles.ctaContent}>
+                  <Ionicons name="logo-whatsapp" size={20} color={PALETTE.white} style={{ marginRight: 8 }} />
+                  <Text style={styles.ctaText}>SEND VIA WHATSAPP</Text>
+                </View>
               )}
             </LinearGradient>
           </Pressable>
@@ -128,7 +155,7 @@ const styles = StyleSheet.create({
     padding: 22,
     alignItems: 'center',
   },
-  title: { color: PALETTE.white, fontSize: 18, fontWeight: '800', marginBottom: 6 },
+  title: { color: PALETTE.white, fontSize: 18, fontWeight: '800', marginBottom: 6, textAlign: 'center' },
   subtitle: { color: PALETTE.textMuted, fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 18 },
   readOnlyRow: {
     flexDirection: 'row',
@@ -140,14 +167,19 @@ const styles = StyleSheet.create({
     height: 44,
     marginBottom: 10,
   },
-  readOnlyText: { color: PALETTE.textMuted, fontSize: 14 },
+  readOnlyText: { color: PALETTE.textMuted, fontSize: 14, flex: 1 },
   cta: {
     alignSelf: 'stretch',
     height: 50,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
+    marginTop: 14,
+  },
+  ctaContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ctaText: { color: PALETTE.white, fontSize: 14, fontWeight: '800', letterSpacing: 1.5 },
   skipBtn: { marginTop: 14 },

@@ -472,7 +472,7 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
           {/* Section 4 – Portal Login */}
           <SectionHeader title="Member Portal Login" palette={palette} />
           <Text style={[styles.groupLabel, { color: palette.textMuted, marginBottom: 6 }]}>
-            Set a password for this member's gym app login.{'\n'}Leave blank to use default: 123456
+            Set a password for this member's gym app login.{'\n'}Leave blank to skip creating app login for now.
           </Text>
           <View style={[styles.inputWrap, { backgroundColor: palette.inputBg, borderColor: palette.inputBorder }]}>
             <Ionicons name="lock-closed-outline" size={18} color={palette.textMuted} style={styles.inputIcon} />
@@ -524,7 +524,7 @@ export default function AddMemberScreen({ onBack, onSaved }: Props) {
       <WhatsappOnboardingModal
         visible={!!savedMember}
         member={savedMember}
-        password={password.trim().length >= 6 ? password.trim() : '123456'}
+        password={password.trim().length >= 6 ? password.trim() : ''}
         onDone={() => {
           setSavedMember(null);
           onSaved();

@@ -30,11 +30,12 @@ export default function WhatsappOnboardingModal({ visible, member, password, onD
 
   if (!member) return null;
 
+  const hasLoginDetails = !!(member.email && password);
+
   const handleSend = async () => {
     setSending(true);
     try {
       const dueAmount = member.dueAmount ?? 0;
-      const hasLoginDetails = !!(member.email && password);
       const message =
         `Hello ${member.name},\n\n` +
         `Welcome to the gym! Your membership is now active.\n\n` +
@@ -70,21 +71,27 @@ export default function WhatsappOnboardingModal({ visible, member, password, onD
           <Ionicons name="logo-whatsapp" size={40} color={PALETTE.success} style={{ marginBottom: 12 }} />
           <Text style={styles.title}>Member Registered</Text>
           <Text style={styles.subtitle}>
-            Send {member.name}'s app login details to them on WhatsApp.
+            {hasLoginDetails
+              ? `Send ${member.name}'s app login details to them on WhatsApp.`
+              : `Send ${member.name}'s membership details to them on WhatsApp.`}
           </Text>
 
-          <View style={styles.readOnlyRow}>
-            <Ionicons name="mail-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
-            <Text style={styles.readOnlyText}>{member.email}</Text>
-          </View>
+          {!!member.email && (
+            <View style={styles.readOnlyRow}>
+              <Ionicons name="mail-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
+              <Text style={styles.readOnlyText}>{member.email}</Text>
+            </View>
+          )}
           <View style={styles.readOnlyRow}>
             <Ionicons name="call-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
             <Text style={styles.readOnlyText}>+91 {member.mobile}</Text>
           </View>
-          <View style={styles.readOnlyRow}>
-            <Ionicons name="lock-closed-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
-            <Text style={styles.readOnlyText}>{password}</Text>
-          </View>
+          {hasLoginDetails && (
+            <View style={styles.readOnlyRow}>
+              <Ionicons name="lock-closed-outline" size={16} color={PALETTE.textMuted} style={{ marginRight: 8 }} />
+              <Text style={styles.readOnlyText}>{password}</Text>
+            </View>
+          )}
 
           <Pressable onPress={handleSend} disabled={sending}>
             <LinearGradient
